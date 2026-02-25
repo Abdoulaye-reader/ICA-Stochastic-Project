@@ -1,0 +1,146 @@
+"""
+PROJECT GUIDE: ICA Stochastic Optimization
+===========================================
+
+Your project structure is now set up! Here's what to focus on next.
+
+PHASE 1: Algorithm Refinement (Current)
+---------------------------------------
+
+Files to complete:
+  ✅ src/utils.py - Core utilities (Amari index, data generation)
+  ⏳ src/algorithms.py - Fix FastICA and other algorithms
+  ⏳ Add convergence criteria and better loss tracking
+
+Known issues to fix:
+  - FastICA has shape mismatch in the gradient computation
+  - Loss functions need proper numerical stability
+  - Add early stopping based on Amari index improvement
+
+PHASE 2: Comprehensive Experiments
+----------------------------------
+
+Create experiments/ files for:
+  1. Synthetic data with different source distributions
+  2. Convergence analysis (iteration vs Amari index)
+  3. Scalability test (varying n_samples)
+  4. Different nonlinearity functions (logcosh, exp, cube)
+  5. Hyperparameter sensitivity analysis
+  6. Real-world data: audio (cocktail party), EEG, or images
+
+Key metrics to track:
+  - Amari Index (mean ± std over multiple runs)
+  - Convergence speed (time to reach target Amari)
+  - Wall-clock time per iteration
+  - Memory usage
+  - Numerical stability (NaN/Inf occurrences)
+
+PHASE 3: Creative Contribution
+------------------------------
+
+Choose ONE of these directions:
+  A. ICA+VAE: Learn source distributions instead of fixing them
+  B. EM-ICA: Stochastic EM for ICA
+  C. LinGAM: Causal inference with stochastic optimization
+  D. ICA for missing data: Handle incomplete observations
+  E. Online ICA: Process streaming data
+
+Recommendation: Start with ICA+VAE (most impactful) or EM-ICA (good balance)
+
+PHASE 4: Report Writing
+----------------------
+
+Structure (10 pages max):
+  1. Introduction (2 pages)
+     - ICA problem formulation
+     - Why stochastic optimization matters
+     - Your contribution thesis
+
+  2. Methods (3 pages)
+     - Algorithm descriptions and pseudocode
+     - Nonlinearity choices and justification
+     - Hyperparameter selection
+
+  3. Experiments (2-3 pages)
+     - Synthetic data protocol
+     - Real data if applicable
+     - Results table with Amari indices
+     - Convergence plots
+
+  4. Discussion (1-2 pages)
+     - What worked well?
+     - Limitations encountered
+     - Trade-offs between methods
+     - Insights about your contribution
+
+  5. Conclusion (0.5 page)
+     - Summary of findings
+     - Future work
+
+IMPLEMENTATION TIPS
+===================
+
+1. Testing & Validation
+   - Test on known 2D/3D synthetic data first
+   - Verify Amari index logic separately
+   - Check gradients numerically (finite differences)
+
+2. Debugging Convergence Issues
+   - Add loss/gradient history plotting
+   - Check for NaN/Inf values
+   - Validate matrix operations (shapes, determinants)
+   - Use smaller datasets initially
+
+3. Reproducibility
+   - Always set numpy.random.seed()
+   - Document all hyperparameters used
+   - Keep detailed experiment logs
+   - Version your code with git
+
+4. Time Management
+   - Experiments can take hours - run in background
+   - Focus on 2-3 strong results vs many weak ones
+   - Quality of contribution > quantity of code
+
+SUGGESTED WORKFLOW
+==================
+
+Week 1:
+  - ✅ Setup done
+  - Fix algorithm bugs
+  - Run basic experiments on synthetic data
+  - Verify all algorithms work
+
+Week 2-3:
+  - Design comprehensive experiments
+  - Compare algorithms systematically
+  - Analyze convergence behavior
+  - Start creative contribution
+
+Week 4:
+  - Complete creative contribution
+  - Analyze results deeply
+  - Write report draft
+
+Week 5:
+  - Polish report
+  - Create presentation
+  - Final testing and reproducibility check
+
+NEXT IMMEDIATE STEPS
+====================
+
+1. Fix FastICA gradient computation in src/algorithms.py
+2. Add better error handling and numerical stability
+3. Create experiments/synthetic_data_comparison.py
+4. Test with various dataset sizes and source types
+5. Track and visualize convergence
+
+Resources:
+  - Reference implementations: scikit-learn FastICA
+  - Papers: See README.md bibliography
+  - Debugging: Print intermediate matrices, check shapes
+
+Good luck! Remember: a simple but well-executed contribution
+beats an ambitious half-finished one.
+"""
