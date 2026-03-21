@@ -1,114 +1,168 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+
+\title{Implementation et Evaluation de Methodes ICA Classiques et Stochastiques}
+\author{Abdoulaye Diallo}
+\date{21 mars 2026}
+
+\begin{document}
+\maketitle
+\tableofcontents
+\newpage
 
 \section{Introduction}
-% 2 pages: contexte, objectifs, positionnement de votre contribution
 
 \subsection{Contexte}
+L'Analyse en Composantes Independantes (ICA) vise a separer des sources latentes statistiquement independantes a partir d'observations melangees lineairement. Les methodes classiques comme Infomax \cite{bell1995information} et FastICA \cite{hyvarinen1999fast} sont des references solides, mais les variantes stochastiques sont importantes pour des jeux de donnees volumineux et pour le traitement en flux.
 
-\subsection{Problématique}
+Dans ce projet on cherche a comparer des methodes ICA en termes de qualite de separation et de comportement numerique. La metrique centrale retenue est l'indice d'Amari \cite{amari1996new}, qui quantifie l'ecart entre la matrice de performance estimee et une structure permutation-dilatation ideale.
+On propose egalement une contribution creative en explorant l'impact de la gaussianite des sources sur les performances ICA, en utilisant une gaussienne generalisee avec un parametre de kurtosis variable.
+\subsection{Structure du projet}
+Le projet se construit de la maniere suivante pour atteindre:
+\begin{itemize}
+\item implementation de plusieurs methodes ICA, incluant des variantes stochastiques,
+\item validation de l'implementation via des tests synthetiques,
+\item comparaison systematique des methodes sur des jeux de donnees synthetiques avec evaluation via l'indice d'Amari,
+\item Et enfin etude de l'impact de la gaussianite sur les performances ICA.
+\end{itemize}
 
-\subsection{Objectifs du projet}
+\section{Fondements Theoriques}
+On commence par les bases de l'ICA, en particulier le modele lineaire, l'hypothese de non-gaussianite et le critere Infomax.
+\subsection{Le modele ICA}
+Le modele lineaire est:
+\begin{equation}
+x = A s,
+\end{equation}
+ou $s$ est un vecteur de sources independantes et $A$ la matrice de melange. On cherche une matrice de demelange $V$ telle que $y = Vx$ recupere les sources a permutation et echelle pres.
 
-\subsection{Contributions}
+\subsection{Hypothese de non-gaussianite}
+L'identifiabilite de l'ICA repose sur la non-gaussianite des sources (au plus une source gaussienne). Cette hypothese motive l'usage de contrastes non lineaires (par exemple logcosh/tanh) dans les algorithmes pratiques.
+
+\subsection{Critere Infomax}
+Pour un echantillon $x$ et $y=Vx$, la log-vraisemblance echantillon est ecrite:
+\begin{equation}
+\ell(V;x)=\log|\det(V)|+\sum_{j=1}^{D}\log p_j(y_j).
+\end{equation}
+Avec la fonction score $g(u)=\frac{d}{du}\log p(u)$, le gradient echantillon est:
+\begin{equation}
+\nabla_V\ell(V;x)=V^{-T}+g(y)x^T.
+\end{equation}
 
 
-\section{Fondements Théoriques}
-% Rappel du modèle ICA et des hypothèses
+\section{Methodes}
 
-\subsection{Le modèle ICA}
-
-\subsection{Hypothèse de non-gaussianité}
-
-\subsection{Critère Infomax}
-
-
-\section{Méthodes}
-% 3 pages: description des algorithmes, choix de la non-linéarité, hyperparamètres
-
-\subsection{Algorithmes implémentés}
+\subsection{Algorithmes implementes}
 
 \subsubsection{Infomax avec gradient batch}
 
+
 \subsubsection{FastICA}
+Pour FastICA, l'implementation \texttt{sklearn.decomposition.FastICA} est utilisee (mode parallel, non linearite logcosh) avec calcul de l'indice d'Amari.
+\subsubsection{Choix de la fonction score}
+Le choix actuel est $g(u)=\tanh(u)$, coherent avec des sources super-gaussiennes. Ce choix est standard en pratique et stable numeriquement pour une premiere phase de developpement.
+
+\subsubsection{Hyperparametres}
+Les parametres utilises pour FastICA sont:
+\begin{itemize}
+\item algorithm = parallel,
+\item fun = logcosh,
+\item max\_iter = 1000,
+\item tol = 1e-6,
+\item random\_state = 42.
+\end{itemize}
+
+
 
 \subsubsection{SGD-ICA}
 
+
 \subsubsection{Adam-ICA}
 
-\subsubsection{Gradient Naturel (optionnel)}
 
-\subsection{Choix de la fonction score}
+\section{Experiences}
 
-\subsection{Hyperparamètres}
-
-
-\section{Expériences}
-% 2-3 pages: protocole, datasets, métriques, résultats avec barres d'erreur
-
-\subsection{Protocole expérimental}
+\subsection{Protocole experimental}
+Le protocole a utilise est un test synthetique de separation:
+\begin{itemize}
+\item generation de trois sources non gaussiennes,
+\item melange lineaire par une matrice $A$ inversible,
+\item pretraitement (centrage + whitening),
+\item estimation de $\hat V$,
+\item evaluation via $C=\hat V A$ et indice d'Amari.
+\end{itemize}
 
 \subsection{Datasets}
 
-\subsubsection{Données synthétiques}
+\subsubsection{Donnees synthetiques}
+Jeu de donnees synthetique avec $D=3$ et $N=5000$ echantillons, comprenant des distributions non gaussiennes (Laplace, uniforme centree, Student).
 
-\subsubsection{Données réelles (optionnel)}
 
-\subsection{Métriques d'évaluation}
 
+\subsection{Metriques d'evaluation}
+L'evaluation se fait principalement via l'indice d'Amari, qui mesure la proximite de la matrice de performance $C=\hat V A$ a une matrice de permutation-dilatation ideale. Un indice proche de 0 indique une separation quasi-parfaite, tandis que des valeurs plus elevees indiquent des erreurs de separation.
 \subsubsection{Indice d'Amari}
+L'indice d'Amari est calcule a partir de $C=\hat V A$:
+\begin{equation}
+r(C)=\frac{1}{2D(D-1)}\left[\sum_i\left(\frac{\sum_j|c_{ij}|}{\max_k|c_{ik}|}-1\right)+\sum_j\left(\frac{\sum_i|c_{ij}|}{\max_k|c_{kj}|}-1\right)\right].
+\end{equation}
+Une valeur proche de 0 indique une bonne separation.
 
-\subsection{Résultats}
+\subsection{Resultats}
 
 \subsubsection{Comparaison des algorithmes}
+Resultats de comparaison:
 
-% Tableau avec Amari Index (mean ± std)
 \begin{table}[h]
 \centering
 \begin{tabular}{lccc}
 \toprule
 Algorithme & Amari Index & Temps (s) & Convergence \\
 \midrule
-Infomax Batch & & & \\
-FastICA & & & \\
-SGD-ICA & & & \\
-Adam-ICA & & & \\
+FastICA (sklearn) & 0.0116 & 0.5 & Oui \\
 \bottomrule
 \end{tabular}
-\caption{Comparaison des algorithmes ICA}
+\caption{Comparaison preliminaire des methodes ICA}
 \end{table}
 
-\subsubsection{Effet des sources gaussiennes}
-
-\subsubsection{Courbes de convergence}
 
 
-\section{Contribution Créative}
-% Votre extension originale
+\section{Rôle de la gaussianite dans l'ICA}
 
-\subsection{Motivation}
+L'apport original retenu est l'etude de l'impact de la gaussianite sur l'ICA via une experience faisant varier le parametre de kurtosis d'une gaussienne generalisee.
 
-\subsection{Méthode proposée}
+\subsection{Methode proposee}
 
-\subsection{Résultats}
+
+\subsection{Resultats}
+
 
 
 \section{Discussion}
-% 1-2 pages: analyse critique, limites, comparaison
 
-\subsection{Analyse des résultats}
+\subsection{Analyse des resultats}
 
-\subsection{Limites identifiées}
+\subsection{Limites identifiees}
 
-\subsection{Comparaison entre méthodes}
+
+\subsection{Comparaison entre methodes}
+
 
 \subsection{Insights sur la contribution}
 
 
-\section{Conclusion}
-% 0.5 page: résumé, perspectives
 
-\subsection{Résumé des apports}
+\section{Conclusion}
+
+\subsection{Resume des apports}
 
 \subsection{Perspectives}
+
 
 
 \bibliographystyle{plain}
