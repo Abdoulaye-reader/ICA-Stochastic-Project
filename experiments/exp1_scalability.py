@@ -1,5 +1,5 @@
 """
-Experiment 1: Scalability analysis mirroring notebook experiments.
+Experiment 1: Scalability Analysis
 
 Two complementary studies are run:
 1) Quality/time vs dimension D, with fixed N.
