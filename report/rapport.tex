@@ -53,6 +53,9 @@ Avec la fonction score $g(u)=\frac{d}{du}\log p(u)$, le gradient echantillon est
 \begin{equation}
 \nabla_V\ell(V;x)=V^{-T}+g(y)x^T.
 \end{equation}
+Apres whitening, on impose en pratique $VV^T\approx I$, ce qui conduit a l'approximation
+$V^{-T}\approx V$ et a une mise a jour de type
+$V \leftarrow V + \eta\left(V+\mathbb{E}[g(Vx)x^T]\right)$.
 
 
 \section{Methodes}
@@ -60,12 +63,16 @@ Avec la fonction score $g(u)=\frac{d}{du}\log p(u)$, le gradient echantillon est
 \subsection{Algorithmes implementes}
 
 \subsubsection{Infomax avec gradient batch}
-
+Le critere optimise est la log-vraisemblance Infomax. Dans le cadre du projet
+(donnees centrees puis blanchies), la mise a jour est appliquee en ascension de gradient
+avec mini-batchs et re-orthogonalisation numerique de $V$ a chaque iteration.
 
 \subsubsection{FastICA}
 Pour FastICA, l'implementation \texttt{sklearn.decomposition.FastICA} est utilisee (mode parallel, non linearite logcosh) avec calcul de l'indice d'Amari.
 \subsubsection{Choix de la fonction score}
-Le choix actuel est $g(u)=\tanh(u)$, coherent avec des sources super-gaussiennes. Ce choix est standard en pratique et stable numeriquement pour une premiere phase de developpement.
+Pour rester coherent avec l'enonce, on utilise la definition score stricte
+$g(u)=\frac{d}{du}\log p(u)$. Avec une prior logcosh/super-gaussienne,
+on retient $g(u)=-\tanh(u)$.
 
 \subsubsection{Hyperparametres}
 Les parametres utilises pour FastICA sont:
@@ -80,27 +87,41 @@ Les parametres utilises pour FastICA sont:
 
 
 \subsubsection{SGD-ICA}
-
+SGD-ICA implemente une approximation mini-batch du gradient Infomax:
+\begin{equation}
+V \leftarrow V + \eta\left(V+\frac{1}{m}\sum_{i=1}^{m} g(Vx_i)x_i^T\right).
+\end{equation}
+La contrainte d'orthogonalite apres whitening est imposee numeriquement
+par re-orthogonalisation (QR).
 
 \subsubsection{Adam-ICA}
-
+Adam-ICA utilise exactement le meme gradient que SGD-ICA, mais remplace le pas
+constant par les moments adaptes d'Adam \cite{kingma2014adam}. Cela permet de
+tester si une dynamique adaptative ameliore la stabilite ou la vitesse de convergence.
 
 \section{Experiences}
 
 \subsection{Protocole experimental}
-Le protocole a utilise est un test synthetique de separation:
+Le protocole experimental repose sur des tests synthetiques de separation:
 \begin{itemize}
-\item generation de trois sources non gaussiennes,
+\item generation de sources non gaussiennes independantes,
 \item melange lineaire par une matrice $A$ inversible,
 \item pretraitement (centrage + whitening),
 \item estimation de $\hat V$,
 \item evaluation via $C=\hat V A$ et indice d'Amari.
 \end{itemize}
+Deux campagnes principales ont ete menees:
+\begin{itemize}
+\item scalabilite en dimension $D$ (avec $N$ fixe),
+\item scalabilite en taille d'echantillon $N$ (avec $D$ fixe).
+\end{itemize}
 
 \subsection{Datasets}
 
 \subsubsection{Donnees synthetiques}
-Jeu de donnees synthetique avec $D=3$ et $N=5000$ echantillons, comprenant des distributions non gaussiennes (Laplace, uniforme centree, Student).
+Les experiences utilisent des melanges synthetiques, avec repetition sur plusieurs seeds.
+Le cas de base est $D=3$, $N=5000$. Pour les etudes de scalabilite, $D$ ou $N$ est ensuite
+balaye sur une grille de valeurs.
 
 
 
@@ -116,7 +137,7 @@ Une valeur proche de 0 indique une bonne separation.
 \subsection{Resultats}
 
 \subsubsection{Comparaison des algorithmes}
-Resultats de comparaison:
+Cas de base ($D=3$, $N=5000$):
 
 \begin{table}[h]
 \centering
@@ -124,10 +145,42 @@ Resultats de comparaison:
 \toprule
 Algorithme & Amari Index & Temps (s) & Convergence \\
 \midrule
-FastICA (sklearn) & 0.0116 & 0.5 & Oui \\
+FastICA (sklearn) & 0.0147 & 0.01 & Oui \\
+SGD-ICA (Infomax) & 0.1324 & 0.92 & Oui \\
+Adam-ICA (Infomax) & 0.2553 & 0.92 & Oui \\
 \bottomrule
 \end{tabular}
-\caption{Comparaison preliminaire des methodes ICA}
+\caption{Comparaison sur le cas de base (seed fixe)}
+\end{table}
+
+Scalabilite en dimension ($N=5000$, moyennes sur 3 seeds):
+\begin{table}[h]
+\centering
+\begin{tabular}{lcc}
+\toprule
+Algorithme & Amari moyen (D=3\,$\to$\,40) & Temps moyen (D=3\,$\to$\,40) \\
+\midrule
+FastICA & 0.0124\,$\to$\,0.0129 & 0.014s\,$\to$\,0.584s \\
+SGD-ICA & 0.1516\,$\to$\,0.3044 & 0.521s\,$\to$\,14.315s \\
+Adam-ICA & 0.3073\,$\to$\,0.3116 & 0.488s\,$\to$\,12.151s \\
+\bottomrule
+\end{tabular}
+\caption{Tendance de la scalabilite en dimension}
+\end{table}
+
+Scalabilite en nombre d'echantillons ($D=20$, budget stochastique en epochs fixes):
+\begin{table}[h]
+\centering
+\begin{tabular}{lcc}
+\toprule
+Algorithme & Amari moyen (N=1000\,$\to$\,10000) & Temps moyen (N=1000\,$\to$\,10000) \\
+\midrule
+FastICA & 0.0289\,$\to$\,0.0089 & 0.067s\,$\to$\,0.470s \\
+SGD-ICA & 0.3451\,$\to$\,0.3206 & 0.085s\,$\to$\,9.542s \\
+Adam-ICA & 0.3474\,$\to$\,0.3294 & 0.067s\,$\to$\,8.646s \\
+\bottomrule
+\end{tabular}
+\caption{Tendance de la scalabilite en taille d'echantillon}
 \end{table}
 
 
@@ -146,22 +199,44 @@ L'apport original retenu est l'etude de l'impact de la gaussianite sur l'ICA via
 \section{Discussion}
 
 \subsection{Analyse des resultats}
+Les experiences montrent un comportement robuste de FastICA en qualite de separation
+(indice d'Amari tres faible et stable), aussi bien quand $D$ augmente que quand $N$ augmente.
+Avec les reglages actuels, SGD-ICA et Adam-ICA convergent, mais restent sur un plateau de
+performance sensiblement moins bon.
 
 \subsection{Limites identifiees}
+Les resultats stochastiques restent sensibles a la convention de score, aux hyperparametres,
+et a la frequence de re-orthogonalisation. Le budget de calcul (iterations, epochs) influence
+fortement la comparaison de temps entre methodes batch et stochastiques.
 
 
 \subsection{Comparaison entre methodes}
+Dans l'etat actuel du projet, FastICA domine en precision et en temps. Cela ne contredit pas
+l'interet theorique des methodes stochastiques, mais indique qu'un tuning plus fin est
+necessaire pour observer un avantage pratique en grande echelle.
 
 
 \subsection{Insights sur la contribution}
+La partie experimentation a permis de clarifier un point important: la formulation mathematique
+du gradient (notamment le choix de la score function) doit etre strictement coherente avec
+la log-vraisemblance de reference pour obtenir un comportement numerique interpretable.
 
 
 
 \section{Conclusion}
 
 \subsection{Resume des apports}
+Le projet a produit:
+\begin{itemize}
+\item une implementation fonctionnelle de FastICA, SGD-ICA et Adam-ICA autour du critere Infomax,
+\item une validation sur donnees synthetiques via l'indice d'Amari,
+\item deux etudes de scalabilite (en $D$ et en $N$) avec mesures de qualite et de cout.
+\end{itemize}
 
 \subsection{Perspectives}
+Les prochaines etapes naturelles sont: (i) comparaison a budget temps strictement egal,
+(ii) tuning systematique des hyperparametres stochastiques, (iii) reduction du cout de
+re-orthogonalisation, et (iv) integration concise des resultats de la partie 2 sur la gaussianite.
 
 
 
