@@ -1,84 +1,71 @@
 # ICA Stochastic Project
 
-Projet de comparaison de methodes ICA classiques et stochastiques, avec un focus sur:
-- la qualite de separation (indice d'Amari),
-- le passage a l'echelle (N et D),
-- l'impact de la gaussianite des sources sur l'identifiabilite.
+Ce projet presente une comparaison experimentale entre methodes ICA classiques et stochastiques, avec une progression claire en trois volets:
+1. scalabilite,
+2. convergence,
+3. robustesse au bruit.
 
-Ce depot sert a la fois de base experimentale (scripts + notebooks) et de support de presentation academique.
+Le travail est accompagne d'un rapport academique finalise, redige dans un style scientifique fluide.
 
-## Idee generale
+## Objectif scientifique
 
-On part du modele ICA lineaire:
+On considere le modele ICA lineaire:
 
 $$x = A s$$
 
-avec des sources independantes $s$ et une matrice de melange $A$ inconnue.
-L'objectif est d'estimer une matrice de demelange $V$ telle que $y = Vx$ recupere les sources (a permutation/scale pres).
+ou $s$ est le vecteur des sources independantes et $A$ la matrice de melange inconnue.
+L'objectif est d'estimer une matrice de demelange $V$ telle que $y = Vx$ recupere les sources a permutation et echelle pres.
 
-La metrique principale est l'indice d'Amari, calcule sur:
+Deux familles d'indicateurs sont utilisees:
+- qualite de separation: indice d'Amari,
+- dynamique d'optimisation: evolution de la fonction objective Infomax.
 
-$$C = \hat{V}A$$
+## Etat actuel du projet
 
-Plus l'indice est proche de 0, meilleure est la separation.
+Le projet est maintenant structure autour de:
+- `exp1_scalability.py`: comparaison FastICA / SGD-ICA / Adam-ICA en scalabilite,
+- `convergence_analysis.py`: analyse de convergence des algorithmes stochastiques via la fonction objective,
+- `exp2_noise_robustness.py`: comparaison des 3 algorithmes sous bruit gaussien.
 
-## Structure du projet
+La recherche d'hyperparametres a ete retiree du pipeline principal pour garder un protocole simple, lisible et reproductible.
+
+## Arborescence
 
 ```text
 ICA-Stochastic-Project/
-	src/
-		algorithms.py          # FastICA, SGD-ICA, Adam-ICA, amari_index
-		utils.py               # whitening, generation synthetique, metriques
-	experiments/
-		exp1_scalability.py    # experience N x D + generation de figures
-		results/               # CSV + PDF produits par les experiences
-	notebooks/
-		brouillon.ipynb        # notebook de validation rapide
-		gaussian_problem.ipynb # etude de la gaussianite (en francais)
-		figs/                  # figures exportees depuis notebooks
-	report/
-		rapport.tex
-		references.bib
-	requirements.txt
+  src/
+    algorithms.py
+    utils.py
+  experiments/
+    exp1_scalability.py
+    convergence_analysis.py
+    exp2_noise_robustness.py
+  results/
+    convergence_plot.png
+    noise_robustness_plot.png
+  notebooks/
+    brouillon.ipynb
+    gaussian_problem.ipynb
+  report/
+    rapport.tex
+    references.bib
+  requirements.txt
 ```
 
-## Algorithmes disponibles
+## Algorithmes implementes
 
-Les algorithmes sont dans src/algorithms.py.
+### FastICA
+Implementation de reference via `sklearn.decomposition.FastICA` (mode parallel, non-linearite `logcosh`), avec whitening effectue en amont.
 
-1. FastICA (baseline)
-- via sklearn.decomposition.FastICA
-- mode parallel, non-linearite logcosh
-- utilise les donnees deja whitened (whiten=False)
+### SGD-ICA
+Version stochastique mini-batch du gradient Infomax, avec re-orthogonalisation QR a chaque iteration.
 
-2. SGD-ICA
-- optimisation stochastique mini-batch
-- orthogonalisation de $W$ par QR a chaque iteration
-- non-linearite logcosh (tanh)
-
-3. Adam-ICA
-- meme objectif que SGD-ICA mais avec moments Adam
-- correction de biais + stabilisation numerique
-- orthogonalisation QR egalement
-
-Fonctions utiles:
-- amari_index(C)
-- fastica_components(Xw, ...)
-- fastica_unmixing_matrix(X, whitening_fn, ...)
-- sgd_ica(Xw, ...)
-- adam_ica(Xw, ...)
-
-## Utilitaires disponibles
-
-Dans src/utils.py:
-- center_whiten(X): centrage + whitening PCA
-- generate_synthetic_data(...): generation de sources synthetiques
-- compute_performance_metrics(V_est, A, ...): metriques (Amari, source_mse)
-- unmixing_from_whitened(W, W_white): conversion vers l'espace original
+### Adam-ICA
+Meme gradient que SGD-ICA, mais avec adaptation des pas par moments d'Adam.
 
 ## Installation
 
-Depuis la racine du projet:
+Depuis la racine du depot:
 
 ```bash
 python -m venv .venv
@@ -86,83 +73,61 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-Dependances principales:
-- numpy
-- scipy
-- scikit-learn
-- matplotlib
-- pandas
+## Lancer les experiences
 
-## Utilisation rapide
-
-### 1) Test rapide en Python
-
-```python
-import numpy as np
-from src.utils import generate_synthetic_data, center_whiten
-from src.algorithms import sgd_ica, adam_ica, amari_index, fastica_components
-
-# 1. Donnees synthetiques
-X, S, A = generate_synthetic_data(D=3, N=5000, source_types=['laplace', 'uniform', 'student'], seed=42)
-
-# 2. Pretraitement
-Xw, mu, W_white = center_whiten(X)
-
-# 3. FastICA
-B_fast = fastica_components(Xw, n_components=3, max_iter=1000, tol=1e-6, seed=42)
-V_fast = B_fast @ W_white
-amari_fast = amari_index(V_fast @ A)
-
-# 4. SGD-ICA
-W_sgd, hist_sgd = sgd_ica(Xw, n_iter=500, lr=0.01, batch_size=64, seed=42)
-V_sgd = W_sgd @ W_white
-amari_sgd = amari_index(V_sgd @ A)
-
-# 5. Adam-ICA
-W_adam, hist_adam = adam_ica(Xw, n_iter=500, lr=0.001, batch_size=64, seed=42)
-V_adam = W_adam @ W_white
-amari_adam = amari_index(V_adam @ A)
-
-print('Amari FastICA:', amari_fast)
-print('Amari SGD-ICA:', amari_sgd)
-print('Amari Adam-ICA:', amari_adam)
-```
-
-### 2) Lancer l'experience de scalabilite
+### 1) Scalabilite
 
 ```bash
-python experiments/exp1_scalability.py \
-	--n_samples 1000 5000 10000 50000 \
-	--n_dims 2 3 5 \
-	--n_runs 2 \
-	--output experiments/results
+python experiments/exp1_scalability.py
+```
+
+Ce script produit des tableaux/figures de qualite et de temps selon la dimension et le nombre d'echantillons.
+
+### 2) Convergence stochastique
+
+```bash
+python experiments/convergence_analysis.py --d 10 --n 5000 --n-iter 2000
 ```
 
 Sorties generees:
-- experiments/results/scalability_results.csv
-- experiments/results/amari_vs_n.pdf
-- experiments/results/time_vs_n.pdf
-- experiments/results/amari_vs_d.pdf
+- `results/convergence_raw.csv`
+- `results/convergence_summary.csv`
+- `results/convergence_plot.png`
 
-### 3) Notebook gaussian_problem
+### 3) Robustesse au bruit
 
-Ouvrir notebooks/gaussian_problem.ipynb pour l'experience theorique sur la gaussianite:
-- variation du parametre $\alpha$ d'une gaussienne generalisee,
-- observation de la degradation ICA autour du cas gaussien,
-- interpretation en lien avec le theoreme de Comon.
+```bash
+python experiments/exp2_noise_robustness.py --d 8 --n 4000 --n-iter 1500
+```
 
-## Remarques pratiques
+Sorties generees:
+- `results/noise_robustness_raw.csv`
+- `results/noise_robustness_summary.csv`
+- `results/noise_robustness_plot.png`
 
-- Les algos stochastiques sont sensibles aux hyperparametres (lr, batch_size, n_iter).
-- FastICA sert de baseline stable pour verifier les pipelines.
-- Un warning sklearn peut apparaitre sur n_components avec whiten=False; c'est attendu ici car le whitening est fait en amont.
+## Rapport
 
-## Objectif academique du projet
+Le rapport final est disponible dans:
+- `report/rapport.tex`
 
-Le projet ne se limite pas a "faire tourner des algos".
-L'objectif est aussi de montrer une lecture mathematique correcte:
-- quand ICA reussit,
-- quand ICA se degrade,
-- et surtout pourquoi (non-gaussianite et identifiabilite).
+Compilation locale:
 
-En pratique, cela permet de presenter un travail coherent entre theorie, implementation et validation experimentale.
+```bash
+cd report
+pdflatex rapport.tex
+bibtex rapport
+pdflatex rapport.tex
+pdflatex rapport.tex
+```
+
+Le PDF produit est `report/rapport.pdf`.
+
+## Notes de lecture des resultats
+
+- Un indice d'Amari proche de 0 signifie une meilleure separation.
+- L'objectif Infomax est maximise: une augmentation de la courbe objective indique une convergence numerique coherente.
+- Avec les reglages actuels, FastICA reste la baseline la plus performante en precision, tandis que SGD-ICA montre une dynamique de convergence stochastique solide.
+
+## Suite du projet
+
+La prochaine extension naturelle est l'etude complete du role de la gaussianite des sources (contribution creative du rapport), avec balayage controle d'un parametre de forme et analyse conjointe Amari + convergence.
