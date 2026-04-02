@@ -5,11 +5,12 @@
 \usepackage{amsmath,amssymb}
 \usepackage{booktabs}
 \usepackage{geometry}
+\usepackage{graphicx}
 \geometry{margin=2.5cm}
 
 \title{Implementation et Evaluation de Methodes ICA Classiques et Stochastiques}
 \author{Abdoulaye Diallo}
-\date{21 mars 2026}
+\date{2 avril 2026}
 
 \begin{document}
 \maketitle
@@ -18,227 +19,185 @@
 
 \section{Introduction}
 
-\subsection{Contexte}
-L'Analyse en Composantes Independantes (ICA) vise a separer des sources latentes statistiquement independantes a partir d'observations melangees lineairement. Les methodes classiques comme Infomax \cite{bell1995information} et FastICA \cite{hyvarinen1999fast} sont des references solides, mais les variantes stochastiques sont importantes pour des jeux de donnees volumineux et pour le traitement en flux.
+L'Analyse en Composantes Independantes (ICA) cherche a retrouver des sources latentes statistiquement independantes a partir de signaux observes qui sont des melanges lineaires. Ce cadre est central en separation aveugle de sources, notamment en audio, en biomedical et en traitement de signaux multicanaux.
 
-Dans ce projet on cherche a comparer des methodes ICA en termes de qualite de separation et de comportement numerique. La metrique centrale retenue est l'indice d'Amari \cite{amari1996new}, qui quantifie l'ecart entre la matrice de performance estimee et une structure permutation-dilatation ideale.
-On propose egalement une contribution creative en explorant l'impact de la gaussianite des sources sur les performances ICA, en utilisant une gaussienne generalisee avec un parametre de kurtosis variable.
-\subsection{Structure du projet}
-Le projet se construit de la maniere suivante pour atteindre:
-\begin{itemize}
-\item implementation de plusieurs methodes ICA, incluant des variantes stochastiques,
-\item validation de l'implementation via des tests synthetiques,
-\item comparaison systematique des methodes sur des jeux de donnees synthetiques avec evaluation via l'indice d'Amari,
-\item Et enfin etude de l'impact de la gaussianite sur les performances ICA.
-\end{itemize}
+Dans ce projet, l'objectif principal est de comparer trois approches sous un meme cadre experimental: FastICA comme methode de reference, puis deux variantes stochastiques basees sur le critere Infomax, a savoir SGD-ICA et Adam-ICA. La qualite de separation est evaluee principalement avec l'indice d'Amari \cite{amari1996new}, et l'analyse est completee par une etude de convergence sur la fonction objective et une etude de robustesse au bruit.
 
-\section{Fondements Theoriques}
-On commence par les bases de l'ICA, en particulier le modele lineaire, l'hypothese de non-gaussianite et le critere Infomax.
-\subsection{Le modele ICA}
-Le modele lineaire est:
+La contribution creative du travail est consacree au role de la gaussianite des sources. L'idee est de sortir d'une comparaison purement algorithmique pour interroger une hypothese structurante de l'ICA: la non-gaussianite. Cette partie est redigee en fin de rapport comme une proposition methodologique pleinement exploitable pour une extension experimentale.
+
+\section{Fondements theoriques}
+
+\subsection{Modele ICA}
+
+Le modele lineaire considere est:
 \begin{equation}
 x = A s,
 \end{equation}
-ou $s$ est un vecteur de sources independantes et $A$ la matrice de melange. On cherche une matrice de demelange $V$ telle que $y = Vx$ recupere les sources a permutation et echelle pres.
+ou $s \in \mathbb{R}^D$ designe le vecteur des sources independantes, $A \in \mathbb{R}^{D \times D}$ la matrice de melange, et $x$ les observations. Le probleme consiste a estimer une matrice de demelange $V$ telle que $y = Vx$ reproduise les sources a permutation et echelle pres.
 
-\subsection{Hypothese de non-gaussianite}
-L'identifiabilite de l'ICA repose sur la non-gaussianite des sources (au plus une source gaussienne). Cette hypothese motive l'usage de contrastes non lineaires (par exemple logcosh/tanh) dans les algorithmes pratiques.
+\subsection{Non-gaussianite et identifiabilite}
+
+L'ICA repose sur un resultat classique: l'identification est possible si les sources sont independantes et si au plus une source est gaussienne. En pratique, cette hypothese est capturee par des non-linearites adaptees qui favorisent les distributions super-gaussiennes ou sub-gaussiennes, selon le contexte.
 
 \subsection{Critere Infomax}
-Pour un echantillon $x$ et $y=Vx$, la log-vraisemblance echantillon est ecrite:
+
+Pour une observation $x$ et $y=Vx$, la log-vraisemblance echantillon s'ecrit:
 \begin{equation}
 \ell(V;x)=\log|\det(V)|+\sum_{j=1}^{D}\log p_j(y_j).
 \end{equation}
-Avec la fonction score $g(u)=\frac{d}{du}\log p(u)$, le gradient echantillon est:
+
+En posant la fonction score $g(u)=\frac{d}{du}\log p(u)$, on obtient le gradient:
 \begin{equation}
 \nabla_V\ell(V;x)=V^{-T}+g(y)x^T.
 \end{equation}
-Apres whitening, on impose en pratique $VV^T\approx I$, ce qui conduit a l'approximation
-$V^{-T}\approx V$ et a une mise a jour de type
-$V \leftarrow V + \eta\left(V+\mathbb{E}[g(Vx)x^T]\right)$.
 
+Apres centrage et whitening, on impose numeriquement $VV^T \approx I$, ce qui conduit a l'approximation $V^{-T}\approx V$ et a la mise a jour:
+\begin{equation}
+V \leftarrow V + \eta\left(V+\mathbb{E}[g(Vx)x^T]\right).
+\end{equation}
 
-\section{Methodes}
+C'est cette forme qui est utilisee dans les variantes stochastiques implementees.
+
+\section{Methodes et protocole experimental}
 
 \subsection{Algorithmes implementes}
 
-\subsubsection{Infomax avec gradient batch}
-Le critere optimise est la log-vraisemblance Infomax. Dans le cadre du projet
-(donnees centrees puis blanchies), la mise a jour est appliquee en ascension de gradient
-avec mini-batchs et re-orthogonalisation numerique de $V$ a chaque iteration.
+FastICA est utilise via \texttt{sklearn.decomposition.FastICA} (mode parallel, non-linearite \texttt{logcosh}), avec pretraitement identique aux methodes stochastiques pour garantir une comparaison propre.
 
-\subsubsection{FastICA}
-Pour FastICA, l'implementation \texttt{sklearn.decomposition.FastICA} est utilisee (mode parallel, non linearite logcosh) avec calcul de l'indice d'Amari.
-\subsubsection{Choix de la fonction score}
-Pour rester coherent avec l'enonce, on utilise la definition score stricte
-$g(u)=\frac{d}{du}\log p(u)$. Avec une prior logcosh/super-gaussienne,
-on retient $g(u)=-\tanh(u)$.
+SGD-ICA et Adam-ICA partagent le meme gradient Infomax et la meme fonction score, avec $g(u)=-\tanh(u)$, conformement a une prior de type \texttt{logcosh}. La difference est strictement dans la dynamique d'optimisation: pas constant pour SGD, pas adaptatif pour Adam. Dans les deux cas, une re-orthogonalisation QR est appliquee a chaque iteration pour maintenir la contrainte numerique induite par le whitening.
 
-\subsubsection{Hyperparametres}
-Les parametres utilises pour FastICA sont:
-\begin{itemize}
-\item algorithm = parallel,
-\item fun = logcosh,
-\item max\_iter = 1000,
-\item tol = 1e-6,
-\item random\_state = 42.
-\end{itemize}
+\subsection{Donnees et metrique}
 
+Les experiences sont menees sur des donnees synthetiques generees selon le modele ICA, avec repetitions sur plusieurs graines aleatoires pour estimer la stabilite des conclusions.
 
-
-\subsubsection{SGD-ICA}
-SGD-ICA implemente une approximation mini-batch du gradient Infomax:
-\begin{equation}
-V \leftarrow V + \eta\left(V+\frac{1}{m}\sum_{i=1}^{m} g(Vx_i)x_i^T\right).
-\end{equation}
-La contrainte d'orthogonalite apres whitening est imposee numeriquement
-par re-orthogonalisation (QR).
-
-\subsubsection{Adam-ICA}
-Adam-ICA utilise exactement le meme gradient que SGD-ICA, mais remplace le pas
-constant par les moments adaptes d'Adam \cite{kingma2014adam}. Cela permet de
-tester si une dynamique adaptative ameliore la stabilite ou la vitesse de convergence.
-
-\section{Experiences}
-
-\subsection{Protocole experimental}
-Le protocole experimental repose sur des tests synthetiques de separation:
-\begin{itemize}
-\item generation de sources non gaussiennes independantes,
-\item melange lineaire par une matrice $A$ inversible,
-\item pretraitement (centrage + whitening),
-\item estimation de $\hat V$,
-\item evaluation via $C=\hat V A$ et indice d'Amari.
-\end{itemize}
-Deux campagnes principales ont ete menees:
-\begin{itemize}
-\item scalabilite en dimension $D$ (avec $N$ fixe),
-\item scalabilite en taille d'echantillon $N$ (avec $D$ fixe).
-\end{itemize}
-
-\subsection{Datasets}
-
-\subsubsection{Donnees synthetiques}
-Les experiences utilisent des melanges synthetiques, avec repetition sur plusieurs seeds.
-Le cas de base est $D=3$, $N=5000$. Pour les etudes de scalabilite, $D$ ou $N$ est ensuite
-balaye sur une grille de valeurs.
-
-
-
-\subsection{Metriques d'evaluation}
-L'evaluation se fait principalement via l'indice d'Amari, qui mesure la proximite de la matrice de performance $C=\hat V A$ a une matrice de permutation-dilatation ideale. Un indice proche de 0 indique une separation quasi-parfaite, tandis que des valeurs plus elevees indiquent des erreurs de separation.
-\subsubsection{Indice d'Amari}
-L'indice d'Amari est calcule a partir de $C=\hat V A$:
+La metrique de qualite principale est l'indice d'Amari, calcule a partir de $C=\hat V A$:
 \begin{equation}
 r(C)=\frac{1}{2D(D-1)}\left[\sum_i\left(\frac{\sum_j|c_{ij}|}{\max_k|c_{ik}|}-1\right)+\sum_j\left(\frac{\sum_i|c_{ij}|}{\max_k|c_{kj}|}-1\right)\right].
 \end{equation}
-Une valeur proche de 0 indique une bonne separation.
 
-\subsection{Resultats}
+Une valeur proche de 0 signifie une separation de bonne qualite.
 
-\subsubsection{Comparaison des algorithmes}
-Cas de base ($D=3$, $N=5000$):
+\section{Resultats experimentaux}
+
+\subsection{Scalabilite}
+
+La premiere campagne etudie la scalabilite, d'abord en dimension ($D$ variable, $N$ fixe), puis en nombre d'echantillons ($N$ variable, $D$ fixe). Les tendances observees sont stables: FastICA conserve un indice d'Amari faible sur toute la plage de test, alors que SGD-ICA et Adam-ICA restent plus sensibles aux reglages et se stabilisent sur un niveau de separation moins precis.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lcc}
+\toprule
+Algorithme & Amari moyen (D=3 $\rightarrow$ 40) & Temps moyen (D=3 $\rightarrow$ 40) \\
+\midrule
+FastICA & 0.0124 $\rightarrow$ 0.0129 & 0.014s $\rightarrow$ 0.584s \\
+SGD-ICA & 0.1516 $\rightarrow$ 0.3044 & 0.521s $\rightarrow$ 14.315s \\
+Adam-ICA & 0.3073 $\rightarrow$ 0.3116 & 0.488s $\rightarrow$ 12.151s \\
+\bottomrule
+\end{tabular}
+\caption{Tendance de scalabilite en dimension ($N=5000$, moyenne sur 3 seeds).}
+\end{table}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lcc}
+\toprule
+Algorithme & Amari moyen (N=1000 $\rightarrow$ 10000) & Temps moyen (N=1000 $\rightarrow$ 10000) \\
+\midrule
+FastICA & 0.0289 $\rightarrow$ 0.0089 & 0.067s $\rightarrow$ 0.470s \\
+SGD-ICA & 0.3451 $\rightarrow$ 0.3206 & 0.085s $\rightarrow$ 9.542s \\
+Adam-ICA & 0.3474 $\rightarrow$ 0.3294 & 0.067s $\rightarrow$ 8.646s \\
+\bottomrule
+\end{tabular}
+\caption{Tendance de scalabilite en nombre d'echantillons ($D=20$, budget stochastique en epochs fixes).}
+\end{table}
+
+\subsection{Convergence des methodes stochastiques}
+
+La deuxieme campagne isole la dynamique de convergence de SGD-ICA et Adam-ICA via la fonction objective Infomax. Ici, l'objectif n'est plus seulement la qualite finale, mais la trajectoire d'optimisation iteration par iteration.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lcccc}
+\toprule
+Algorithme & Objective initiale & Objective finale & Gain & Iterations \\
+\midrule
+SGD-ICA & -0.3637 & -0.3504 & +0.0133 & 2000 \\
+Adam-ICA & -0.3637 & -0.3608 & +0.0030 & 2000 \\
+\bottomrule
+\end{tabular}
+\caption{Convergence de la fonction objective (moyennes sur 3 seeds).}
+\end{table}
+
+On observe une progression plus marquee pour SGD-ICA avec les reglages utilises, alors qu'Adam-ICA evolue plus lentement et atteint un plateau plus conservateur. Ce comportement est coherent avec les pas d'apprentissage retenus et avec la variabilite introduite par l'echantillonnage mini-batch.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.82\textwidth]{../results/convergence_plot.png}
+\caption{Evolution de la fonction objective au cours des iterations pour SGD-ICA et Adam-ICA.}
+\label{fig:convergence}
+\end{figure}
+
+\subsection{Robustesse au bruit}
+
+La troisieme campagne ajoute un bruit gaussien aux observations pour comparer la degradation de performance des trois algorithmes en fonction du niveau de bruit.
 
 \begin{table}[h]
 \centering
 \begin{tabular}{lccc}
 \toprule
-Algorithme & Amari Index & Temps (s) & Convergence \\
+Niveau de bruit $\sigma$ & FastICA & SGD-ICA & Adam-ICA \\
 \midrule
-FastICA (sklearn) & 0.0147 & 0.01 & Oui \\
-SGD-ICA (Infomax) & 0.1324 & 0.92 & Oui \\
-Adam-ICA (Infomax) & 0.2553 & 0.92 & Oui \\
+0.0 & 0.0145 & 0.2389 & 0.3498 \\
+0.1 & 0.0262 & 0.2700 & 0.3704 \\
+0.2 & 0.0392 & 0.2625 & 0.3738 \\
+0.5 & 0.0590 & 0.3289 & 0.3477 \\
 \bottomrule
 \end{tabular}
-\caption{Comparaison sur le cas de base (seed fixe)}
+\caption{Indice d'Amari moyen selon le niveau de bruit (3 seeds).}
 \end{table}
 
-Scalabilite en dimension ($N=5000$, moyennes sur 3 seeds):
-\begin{table}[h]
+FastICA reste la methode la plus precise sur l'ensemble des niveaux testes. Les deux variantes stochastiques se degradent davantage, avec un avantage modere pour SGD-ICA face a Adam-ICA lorsque le bruit devient fort.
+
+\begin{figure}[h]
 \centering
-\begin{tabular}{lcc}
-\toprule
-Algorithme & Amari moyen (D=3\,$\to$\,40) & Temps moyen (D=3\,$\to$\,40) \\
-\midrule
-FastICA & 0.0124\,$\to$\,0.0129 & 0.014s\,$\to$\,0.584s \\
-SGD-ICA & 0.1516\,$\to$\,0.3044 & 0.521s\,$\to$\,14.315s \\
-Adam-ICA & 0.3073\,$\to$\,0.3116 & 0.488s\,$\to$\,12.151s \\
-\bottomrule
-\end{tabular}
-\caption{Tendance de la scalabilite en dimension}
-\end{table}
+\includegraphics[width=0.82\textwidth]{../results/noise_robustness_plot.png}
+\caption{Comparaison sous bruit gaussien: Amari (gauche) et temps de calcul (droite).}
+\label{fig:noise_robustness}
+\end{figure}
 
-Scalabilite en nombre d'echantillons ($D=20$, budget stochastique en epochs fixes):
-\begin{table}[h]
-\centering
-\begin{tabular}{lcc}
-\toprule
-Algorithme & Amari moyen (N=1000\,$\to$\,10000) & Temps moyen (N=1000\,$\to$\,10000) \\
-\midrule
-FastICA & 0.0289\,$\to$\,0.0089 & 0.067s\,$\to$\,0.470s \\
-SGD-ICA & 0.3451\,$\to$\,0.3206 & 0.085s\,$\to$\,9.542s \\
-Adam-ICA & 0.3474\,$\to$\,0.3294 & 0.067s\,$\to$\,8.646s \\
-\bottomrule
-\end{tabular}
-\caption{Tendance de la scalabilite en taille d'echantillon}
-\end{table}
+\section{Contribution creative: role de la gaussianite des sources}
 
+La partie creative du projet porte sur une question de fond: comment la proximite a la gaussianite modifie-t-elle la difficulte du probleme ICA, a algorithme fixe? Cette question est importante, car l'hypothese de non-gaussianite n'est pas un detail technique mais la condition meme d'identifiabilite.
 
+\subsection{Idee methodologique}
 
-\section{Rôle de la gaussianite dans l'ICA}
+Pour parametrer finement la forme des sources, on propose d'utiliser une famille de lois gaussiennes generalisees de densite
+\begin{equation}
+p_\beta(s) \propto \exp\left(-\left|\frac{s}{\alpha}\right|^\beta\right),
+\end{equation}
+ou $\beta$ controle la forme de la distribution: $\beta<2$ produit des queues plus lourdes (super-gaussien), $\beta=2$ redonne la gaussienne, et $\beta>2$ donne une distribution plus plate (sub-gaussien).
 
-L'apport original retenu est l'etude de l'impact de la gaussianite sur l'ICA via une experience faisant varier le parametre de kurtosis d'une gaussienne generalisee.
+L'experience consiste ensuite a faire varier $\beta$ sur une grille, a regenerer les melanges pour chaque valeur, puis a mesurer Amari et dynamique de convergence pour FastICA, SGD-ICA et Adam-ICA dans des conditions de calcul comparables.
 
-\subsection{Methode proposee}
+\subsection{Hypothese scientifique et interpretation attendue}
 
+L'hypothese centrale est la suivante: plus les sources se rapprochent d'une gaussienne, plus les contrastes non lineaires deviennent moins informatifs, et plus la separation se degrade. On s'attend donc a observer un minimum de performance autour de $\beta \approx 2$, avec de meilleures recuperations dans les regimes nettement super-gaussiens ou sub-gaussiens.
 
-\subsection{Resultats}
+Cette contribution apporte une lecture mecaniste des resultats observes dans le reste du rapport. Elle ne se limite pas a comparer des scores finaux: elle relie explicitement la performance algorithmique a la structure statistique des sources. En ce sens, elle prolonge le projet vers une analyse plus explicative, et non seulement descriptive.
 
+\section{Discussion generale}
 
+Les resultats obtenus montrent une hierarchie claire dans ce cadre de travail: FastICA domine en precision de separation et en cout de calcul sur donnees synthetiques, tandis que les variantes stochastiques sont plus sensibles aux hyperparametres. Toutefois, l'analyse de convergence indique que SGD-ICA peut progresser de maniere reguliere et exploiter efficacement le cadre mini-batch lorsque les reglages sont favorables.
 
-\section{Discussion}
+L'etude de robustesse au bruit confirme cette lecture: les methodes stochastiques restent fonctionnelles mais se degradent plus vite, alors que FastICA conserve une bonne stabilite. Ces constats ne ferment pas la porte aux approches stochastiques; ils indiquent plutot qu'une comparaison stricte a budget temps egal et un tuning plus fin (en particulier pour Adam) sont necessaires pour juger leur avantage en grande echelle.
 
-\subsection{Analyse des resultats}
-Les experiences montrent un comportement robuste de FastICA en qualite de separation
-(indice d'Amari tres faible et stable), aussi bien quand $D$ augmente que quand $N$ augmente.
-Avec les reglages actuels, SGD-ICA et Adam-ICA convergent, mais restent sur un plateau de
-performance sensiblement moins bon.
-
-\subsection{Limites identifiees}
-Les resultats stochastiques restent sensibles a la convention de score, aux hyperparametres,
-et a la frequence de re-orthogonalisation. Le budget de calcul (iterations, epochs) influence
-fortement la comparaison de temps entre methodes batch et stochastiques.
-
-
-\subsection{Comparaison entre methodes}
-Dans l'etat actuel du projet, FastICA domine en precision et en temps. Cela ne contredit pas
-l'interet theorique des methodes stochastiques, mais indique qu'un tuning plus fin est
-necessaire pour observer un avantage pratique en grande echelle.
-
-
-\subsection{Insights sur la contribution}
-La partie experimentation a permis de clarifier un point important: la formulation mathematique
-du gradient (notamment le choix de la score function) doit etre strictement coherente avec
-la log-vraisemblance de reference pour obtenir un comportement numerique interpretable.
-
-
+Enfin, la contribution creative sur la gaussianite clarifie le point theorique clef du projet: la qualite de separation depend autant du choix d'optimisation que de la nature statistique des sources. Cette articulation entre theorie, implementation et analyse empirique constitue l'apport principal du rapport.
 
 \section{Conclusion}
 
-\subsection{Resume des apports}
-Le projet a produit:
-\begin{itemize}
-\item une implementation fonctionnelle de FastICA, SGD-ICA et Adam-ICA autour du critere Infomax,
-\item une validation sur donnees synthetiques via l'indice d'Amari,
-\item deux etudes de scalabilite (en $D$ et en $N$) avec mesures de qualite et de cout.
-\end{itemize}
+Ce travail a permis d'implementer et d'evaluer FastICA, SGD-ICA et Adam-ICA dans un cadre experimental coherent, avec des mesures conjointes de qualite (Amari), de convergence et de robustesse au bruit. Les campagnes menees montrent que FastICA reste la reference la plus fiable dans le regime synthetique teste, tandis que SGD-ICA presente une dynamique de convergence prometteuse parmi les approches stochastiques.
 
-\subsection{Perspectives}
-Les prochaines etapes naturelles sont: (i) comparaison a budget temps strictement egal,
-(ii) tuning systematique des hyperparametres stochastiques, (iii) reduction du cout de
-re-orthogonalisation, et (iv) integration concise des resultats de la partie 2 sur la gaussianite.
-
-
+La suite naturelle est de finaliser experimentalement l'etude de gaussianite par balayage du parametre de forme $\beta$, puis d'etendre la validation a des donnees reelles. Cette extension permettrait de transformer la contribution creative en resultat empirique complet, tout en conservant la ligne directrice scientifique du projet.
 
 \bibliographystyle{plain}
 \bibliography{references}
