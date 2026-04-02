@@ -1,13 +1,13 @@
 # ICA Stochastic Project
 
-Ce projet presente une comparaison experimentale entre methodes ICA classiques et stochastiques, avec une progression claire en trois volets:
+Ce projet presente une comparaison experimentale entre methodes ICA classiques et stochastiques, avec une progression en trois volets:
 1. scalabilite,
 2. convergence,
 3. robustesse au bruit.
 
-Le travail est accompagne d'un rapport academique finalise, redige dans un style scientifique fluide.
+Le travail est accompagne d'un rapport.
 
-## Objectif scientifique
+## Objectif 
 
 On considere le modele ICA lineaire:
 
@@ -26,8 +26,6 @@ Le projet est maintenant structure autour de:
 - `exp1_scalability.py`: comparaison FastICA / SGD-ICA / Adam-ICA en scalabilite,
 - `convergence_analysis.py`: analyse de convergence des algorithmes stochastiques via la fonction objective,
 - `exp2_noise_robustness.py`: comparaison des 3 algorithmes sous bruit gaussien.
-
-La recherche d'hyperparametres a ete retiree du pipeline principal pour garder un protocole simple, lisible et reproductible.
 
 ## Arborescence
 
