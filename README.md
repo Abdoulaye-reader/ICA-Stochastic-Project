@@ -143,8 +143,4 @@ Le notebook `brouillon.ipynb` reste un espace de travail plus exploratoire pour 
 - Les methodes stochastiques sont surtout utiles pour l'analyse de convergence, la robustesse et certains regimes de grande dimension.
 - La partie gaussienne montre que la non-gaussianite des sources est un facteur determinant, avec une zone critique proche du cas gaussien.
 
-## Suite du projet
 
-Le projet est maintenant pret pour finalisation: le code de comparaison, les notebooks de validation et les figures principales sont en place.
-
-Les derniers ajustements concernent surtout la redaction du rapport et, si besoin, un nettoyage leger de la presentation des figures et des scripts d'experience.
