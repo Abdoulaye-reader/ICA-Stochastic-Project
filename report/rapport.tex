@@ -189,6 +189,12 @@ ou $\beta$ controle la forme de la distribution: $\beta<2$ produit des queues pl
 
 L'experience consiste ensuite a faire varier $\beta$ sur une grille, a regenerer les melanges pour chaque valeur, puis a mesurer Amari et dynamique de convergence pour FastICA, SGD-ICA et Adam-ICA dans des conditions de calcul comparables.
 
+\subsection{Processus de generation des sources}
+
+Dans la pratique, chaque source est echantillonnee independamment selon la loi GG choisie, puis les $D$ sources sont assemblees dans une matrice $S \in \mathbb{R}^{D \times N}$. Le tirage utilise une methode exacte par transformation: on genere d'abord une variable auxiliaire $U \sim \Gamma(1/\beta, 1)$, puis on prend $|X| = U^{1/\beta}$ et un signe equiprobable $\pm 1$. On obtient ainsi des echantillons symetriques autour de zero, avec des queues plus ou moins lourdes selon la valeur de $\beta$.
+
+Une fois la matrice des sources construite, on tire une matrice de melange dense aleatoire $A$, puis on forme les observations par $X = AS$. Les donnees sont ensuite centrees et blanchies avant d'etre fournies aux algorithmes ICA. Ce protocole permet de controler proprement la non-gaussianite des sources tout en conservant un cadre experimental comparable d'une valeur de $\beta$ a l'autre.
+
 \subsection{Hypothèse scientifique et interprétation attendue}
 
 L'hypothèse centrale est la suivante: plus les sources se rapprochent d'une gaussienne, plus les contrastes non-linéaires deviennent moins informatifs, et plus la séparation se dégrade. On s'attend donc à observer un minimum de performance autour de $\beta \approx 2$, avec de meilleures récupérations dans les régimes nettement super-gaussiens ou sub-gaussiens.

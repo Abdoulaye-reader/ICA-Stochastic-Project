@@ -3,7 +3,8 @@
 Ce projet presente une comparaison experimentale entre methodes ICA classiques et stochastiques, avec une progression en trois volets:
 1. scalabilite,
 2. convergence,
-3. robustesse au bruit.
+3. robustesse au bruit,
+4. impact de la non-gaussianite des sources.
 
 Le travail est accompagne d'un rapport.
 
@@ -23,9 +24,10 @@ Deux familles d'indicateurs sont utilisees:
 ## Etat actuel du projet
 
 Le projet est maintenant structure autour de:
-- `exp1_scalability.py`: comparaison FastICA / SGD-ICA / Adam-ICA en scalabilite,
+- `scalability.py`: comparaison FastICA / SGD-ICA / Adam-ICA en scalabilite,
 - `convergence_analysis.py`: analyse de convergence des algorithmes stochastiques via la fonction objective,
-- `exp2_noise_robustness.py`: comparaison des 3 algorithmes sous bruit gaussien.
+- `noise_robustness.py`: comparaison des 3 algorithmes sous bruit gaussien,
+- `gaussian_problem.ipynb`: etude de l'effet de la forme des sources sur l'identifiabilite ICA.
 
 ## Arborescence
 
@@ -35,15 +37,20 @@ ICA-Stochastic-Project/
     algorithms.py
     utils.py
   experiments/
-    exp1_scalability.py
+    scalability.py
     convergence_analysis.py
-    exp2_noise_robustness.py
-  results/
-    convergence_plot.png
-    noise_robustness_plot.png
+    noise_robustness.py
+    results/
+      amari_vs_d.pdf
+      amari_vs_n.pdf
+      time_vs_d.pdf
+      time_vs_n.pdf
   notebooks/
     brouillon.ipynb
     gaussian_problem.ipynb
+  results/
+    convergence_plot.png
+    noise_robustness_plot.png
   report/
     rapport.tex
     references.bib
@@ -76,10 +83,10 @@ pip install -r requirements.txt
 ### 1) Scalabilite
 
 ```bash
-python experiments/exp1_scalability.py
+python experiments/scalability.py
 ```
 
-Ce script produit des tableaux/figures de qualite et de temps selon la dimension et le nombre d'echantillons.
+Ce script produit des tableaux/figures de qualite et de temps selon la dimension et le nombre d'echantillons. Les sorties sont ecrites dans `experiments/results/`.
 
 ### 2) Convergence stochastique
 
@@ -95,7 +102,7 @@ Sorties generees:
 ### 3) Robustesse au bruit
 
 ```bash
-python experiments/exp2_noise_robustness.py --d 8 --n 4000 --n-iter 1500
+python experiments/noise_robustness.py --d 8 --n 4000 --n-iter 1500
 ```
 
 Sorties generees:
@@ -120,12 +127,24 @@ pdflatex rapport.tex
 
 Le PDF produit est `report/rapport.pdf`.
 
+## Notes notebook
+
+Les notebooks sont fournis pour l'exploration et la validation progressive. Ils jouent un role de support a la version finale du projet, avec un passage progressif du brouillon vers des resultats stabilises.
+
+Le notebook `gaussian_problem.ipynb` documente l'impact de la non-gaussianite sur les performances ICA. Il met en evidence la degradation autour du cas quasi-gaussien et sert de validation theoriquement interpretable pour la partie finale du rapport.
+
+Le notebook `brouillon.ipynb` reste un espace de travail plus exploratoire pour les tests de grande dimension et les analyses complementaires.
+
 ## Notes de lecture des resultats
 
 - Un indice d'Amari proche de 0 signifie une meilleure separation.
 - L'objectif Infomax est maximise: une augmentation de la courbe objective indique une convergence numerique coherente.
-- Avec les reglages actuels, FastICA reste la baseline la plus performante en precision, tandis que SGD-ICA montre une dynamique de convergence stochastique solide.
+- Avec les reglages actuels, FastICA reste la baseline la plus performante en precision sur les cas tests principaux.
+- Les methodes stochastiques sont surtout utiles pour l'analyse de convergence, la robustesse et certains regimes de grande dimension.
+- La partie gaussienne montre que la non-gaussianite des sources est un facteur determinant, avec une zone critique proche du cas gaussien.
 
 ## Suite du projet
 
-La prochaine extension naturelle est l'etude complete du role de la gaussianite des sources (contribution creative du rapport), avec balayage controle d'un parametre de forme et analyse conjointe Amari + convergence.
+Le projet est maintenant pret pour finalisation: le code de comparaison, les notebooks de validation et les figures principales sont en place.
+
+Les derniers ajustements concernent surtout la redaction du rapport et, si besoin, un nettoyage leger de la presentation des figures et des scripts d'experience.
