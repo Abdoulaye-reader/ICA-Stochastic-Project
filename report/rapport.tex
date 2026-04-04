@@ -183,37 +183,51 @@ La partie creative du projet porte sur une question de fond: comment la proximit
 
 Pour parametrer finement la forme des sources, on propose d'utiliser une famille de lois gaussiennes generalisees de densite
 \begin{equation}
-p_\beta(s) \propto \exp\left(-\left|\frac{s}{\alpha}\right|^\beta\right),
+p_\alpha(s) \propto \exp\left(-|s|^\alpha\right),
 \end{equation}
-ou $\beta$ controle la forme de la distribution: $\beta<2$ produit des queues plus lourdes (super-gaussien), $\beta=2$ redonne la gaussienne, et $\beta>2$ donne une distribution plus plate (sub-gaussien).
+ou $\alpha$ controle la forme de la distribution: $\alpha<2$ produit des queues plus lourdes (super-gaussien), $\alpha=2$ redonne la gaussienne, et $\alpha>2$ donne une distribution plus plate (sub-gaussien).
 
-L'experience consiste ensuite a faire varier $\beta$ sur une grille, a regenerer les melanges pour chaque valeur, puis a mesurer Amari et dynamique de convergence pour FastICA, SGD-ICA et Adam-ICA dans des conditions de calcul comparables.
+L'experience consiste ensuite a faire varier $\alpha$ sur une grille, a regenerer les melanges pour chaque valeur, puis a mesurer Amari et dynamique de convergence pour FastICA, SGD-ICA et Adam-ICA dans des conditions de calcul comparables.
 
 \subsection{Processus de generation des sources}
 
-Dans la pratique, chaque source est echantillonnee independamment selon la loi GG choisie, puis les $D$ sources sont assemblees dans une matrice $S \in \mathbb{R}^{D \times N}$. Le tirage utilise une methode exacte par transformation: on genere d'abord une variable auxiliaire $U \sim \Gamma(1/\beta, 1)$, puis on prend $|X| = U^{1/\beta}$ et un signe equiprobable $\pm 1$. On obtient ainsi des echantillons symetriques autour de zero, avec des queues plus ou moins lourdes selon la valeur de $\beta$.
+Dans la pratique, chaque source est echantillonnee independamment selon la loi GG choisie, puis les $D$ sources sont assemblees dans une matrice $S \in \mathbb{R}^{D \times N}$. Le tirage utilise une methode exacte par transformation: on genere d'abord une variable auxiliaire $U \sim \Gamma(1/\alpha, 1)$, puis on prend $|X| = U^{1/\alpha}$ et un signe equiprobable $\pm 1$. On obtient ainsi des echantillons symetriques autour de zero, avec des queues plus ou moins lourdes selon la valeur de $\alpha$.
 
-Une fois la matrice des sources construite, on tire une matrice de melange dense aleatoire $A$, puis on forme les observations par $X = AS$. Les donnees sont ensuite centrees et blanchies avant d'etre fournies aux algorithmes ICA. Ce protocole permet de controler proprement la non-gaussianite des sources tout en conservant un cadre experimental comparable d'une valeur de $\beta$ a l'autre.
+Une fois la matrice des sources construite, on tire une matrice de melange dense aleatoire $A$, puis on forme les observations par $X = AS$. Les donnees sont ensuite centrees et blanchies avant d'etre fournies aux algorithmes ICA. Ce protocole permet de controler proprement la non-gaussianite des sources tout en conservant un cadre experimental comparable d'une valeur de $\alpha$ a l'autre.
 
 \subsection{Hypothèse scientifique et interprétation attendue}
 
-L'hypothèse centrale est la suivante: plus les sources se rapprochent d'une gaussienne, plus les contrastes non-linéaires deviennent moins informatifs, et plus la séparation se dégrade. On s'attend donc à observer un minimum de performance autour de $\beta \approx 2$, avec de meilleures récupérations dans les régimes nettement super-gaussiens ou sub-gaussiens.
+L'hypothèse centrale est la suivante: plus les sources se rapprochent d'une gaussienne, plus les contrastes non-linéaires deviennent moins informatifs, et plus la séparation se dégrade. On s'attend donc à observer un minimum de performance autour de $\alpha \approx 2$, avec de meilleures récupérations dans les régimes nettement super-gaussiens ou sub-gaussiens.
 
 Cette contribution apporte une lecture mécaniste des résultats observés dans le reste du rapport. Elle ne se limite pas à comparer des scores finaux: elle relie explicitement la performance algorithmique à la structure statistique des sources. En ce sens, elle prolonge le projet vers une analyse plus explicative, et non seulement descriptive.
 
 \subsection{Résultats préliminaires sur la variation de gaussianité}
 
-Pour vérifier cette hypothèse, une grille de paramètres $\beta \in \{0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 4.0\}$ a été utilisée. Pour chaque $\beta$, 50 réalisations indépendantes de sources gaussiennes généralisées ont été générées, mélangées avec une matrice aléatoire $A$ de taille $10 \times 10$, puis soumises aux trois algorithmes dans des conditions identiques.
+Pour vérifier cette hypothèse, une grille de paramètres $\alpha \in \{0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 4.0\}$ a été utilisée. Pour chaque $\alpha$, 50 réalisations indépendantes de sources gaussiennes généralisées ont été générées, mélangées avec une matrice aléatoire $A$ de taille $10 \times 10$, puis soumises aux trois algorithmes dans des conditions identiques.
 
-À $\beta = 0.5$ (régime extrême hyper-super-gaussien), les trois méthodes affichent de bonnes performances (Amari moyen pour FastICA $\approx 0.008$, SGD-ICA $\approx 0.025$, Adam-ICA $\approx 0.045$). À mesure que $\beta$ approche 2, les performances se dégradent progressivement: à $\beta = 1.8$, FastICA atteint Amari $\approx 0.015$, tandis que SGD et Adam stagnent autour de 0.08--0.12, suggérant un plateau de difficulté.
+À $\alpha = 0.5$ (régime extrême hyper-super-gaussien), les trois méthodes affichent de bonnes performances (Amari moyen pour FastICA $\approx 0.008$, SGD-ICA $\approx 0.025$, Adam-ICA $\approx 0.045$). À mesure que $\alpha$ approche 2, les performances se dégradent progressivement: à $\alpha = 1.8$, FastICA atteint Amari $\approx 0.015$, tandis que SGD et Adam stagnent autour de 0.08--0.12, suggérant un plateau de difficulté.
 
-Autour de $\beta = 2.2$ (légèrement sub-gaussien), les performances commencent à s'améliorer à nouveau, notamment pour FastICA qui revient à $\approx 0.012$. Ce pattern V-shaped ou U-shaped confirme qualitativement notre hypothèse: plus la distribution source s'éloigne d'une gaussienne, plus les contrastes non-linéaires deviennent exploitables.
+Autour de $\alpha = 2.2$ (légèrement sub-gaussien), les performances commencent à s'améliorer à nouveau, notamment pour FastICA qui revient à $\approx 0.012$. Ce pattern V-shaped ou U-shaped confirme qualitativement notre hypothèse: plus la distribution source s'éloigne d'une gaussienne, plus les contrastes non-linéaires deviennent exploitables.
 
-Quantitativement, cet effet est plus prononcé pour FastICA (variation Amari de 0.008 à 0.020 sur l'intervalle $\beta \in [0.5, 4.0]$) que pour les méthodes stochastiques (variation de 0.025 à 0.12 pour SGD, 0.04 à 0.15 pour Adam), suggérant que la déterminationalgébrique de FastICA la rend moins sensible aux variations fines de la distribution source.
+Quantitativement, cet effet est plus prononcé pour FastICA (variation Amari de 0.008 à 0.020 sur l'intervalle $\alpha \in [0.5, 4.0]$) que pour les méthodes stochastiques (variation de 0.025 à 0.12 pour SGD, 0.04 à 0.15 pour Adam), suggérant que la déterminationalgébrique de FastICA la rend moins sensible aux variations fines de la distribution source.
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.88\textwidth]{../results/kurtosis_impact.png}
+\caption{Impact de la gaussianité des sources sur la qualité de séparation (indice d'Amari) et lien avec le kurtosis empirique.}
+\label{fig:kurtosis-impact}
+\end{figure}
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.92\textwidth]{../results/gg_distributions.png}
+\caption{Formes de distributions gaussiennes généralisées pour différentes valeurs de $\alpha$.}
+\label{fig:gg-distributions}
+\end{figure}
 
 \subsection{Implications théoriques et perspectives}
 
-Ces résultats préliminaires soulèvent plusieurs questions pour des travaux ultérieurs: (i) Comment quantifier précisément le régime critique local minima en $\beta$? (ii) Y a-t-il une relation analytique entre le kurtosis de la source et la performance algorithmique? (iii) Comment adapter les algorithmes (p.ex. par selection de contraste en fonction de $\beta$ estimé) pour minimiser l'effet de dégradation en zone gaussienne?
+Ces résultats préliminaires soulèvent plusieurs questions pour des travaux ultérieurs: (i) Comment quantifier précisément le régime critique local minima en $\alpha$? (ii) Y a-t-il une relation analytique entre le kurtosis de la source et la performance algorithmique? (iii) Comment adapter les algorithmes (p.ex. par selection de contraste en fonction de $\alpha$ estimé) pour minimiser l'effet de dégradation en zone gaussienne?
 
 L'exploration systématique de ces questions dépasserait le cadre de ce rapport, mais elle constitue une direction naturelle et scientifiquement motivée pour prolonger le travail.
 
